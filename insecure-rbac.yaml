@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: insecure-service-account
+  namespace: vulnerable-test
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: insecure-binding
+subjects:
+- kind: ServiceAccount
+  name: insecure-service-account
+  namespace: vulnerable-test
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin  # Excessive permissions (vulnerability)
+  apiGroup: rbac.authorization.k8s.io
+---

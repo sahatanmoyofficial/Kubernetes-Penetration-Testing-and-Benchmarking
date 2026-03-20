@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-flask
+  namespace: vulnerable-test
+  labels:
+    app: vulnerable-flask
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-flask
+  template:
+    metadata:
+      labels:
+        app: vulnerable-flask
+    spec:
+      serviceAccountName: insecure-service-account
+      securityContext:
+        runAsUser: 0  # Running as root (vulnerability)
+      containers:
+        - name: flask-container
+          image: flask-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+            capabilities:
+              add: ["SYS_ADMIN", "NET_ADMIN"]  # Excessive capabilities (moved here)
+          env:
+            - name: SECRET_PASSWORD
+              value: "admin123"
+          volumeMounts:
+            - name: host-root
+              mountPath: /host
+      volumes:
+        - name: host-root
+          hostPath:
+            path: /
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulnerable-flask-service
+  namespace: vulnerable-test
+spec:
+  type: NodePort
+  selector:
+    app: vulnerable-flask
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30081
